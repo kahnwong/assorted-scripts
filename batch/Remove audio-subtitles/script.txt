@@ -1,0 +1,8 @@
+for %%i in (*.mkv) do ffmpeg.exe -i new_folder/"%%i" -c:v libx264 -b:v 13853k -c:a libvo_aacenc -b:a 128k  "%%i"
+
+ffmpeg.exe -i "file.mkv" -c:v libx264 -b:v 13853k -c:a libvo_aacenc -b:a 128k output.mkv
+
+ffmpeg -i input.mkv -b:v 4289k -b:a 128k output.mkv
+
+//x265
+ffmpeg -i "Epica - Hellfest 2015-001.mkv" -c:v libx265 -preset ultrafast -x265-params lossless=1 OUTPUT.mkv

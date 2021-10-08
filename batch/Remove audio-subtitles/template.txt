@@ -1,0 +1,16 @@
+// remove selected audio and subtitles
+for %%i in (*.mkv) do mkvmerge -o new_folder/"%%i" --atracks 4  --subtitle-tracks 6 "%%i"
+#--subtitle-tracks 1,3 input.mkv
+
+//encode
+for %%a in ("*.mkv") do ffmpeg.exe -i "%%a" -vcodec copy -acodec copy "%%~na .mp4"
+pause
+
+
+
+for %%i in (*.mkv) do ffmpeg.exe -i new_folder/"%%i" -vcodec copy -acodec copy "%%i"
+
+for %%i in (*.mkv) do ffmpeg.exe -i new_folder/"%%i" -b:v 13853k -b:a 128k  "%%i"
+
+1024*4 mb * 8192 / 600 seconds = 4417
+4417 - 128 k = 4289
