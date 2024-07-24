@@ -1,3 +1,5 @@
 reddit.py
 *.txt
+*json
+*.qmd
 .env
