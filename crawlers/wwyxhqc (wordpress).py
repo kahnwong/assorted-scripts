@@ -30,7 +30,6 @@ def get_chapters(url):
 
 
 def doc_clean_up(chapter):
-
     """Scrape"""
     response = requests.get(chapter)
     doc = Document(response.text)
