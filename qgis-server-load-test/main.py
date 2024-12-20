@@ -4,7 +4,6 @@ import uuid
 import pytest
 import requests
 
-
 # prep input
 bboxes = []
 with open("grid_fine_grained.geojsonl.json", "r") as f:

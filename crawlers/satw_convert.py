@@ -1,8 +1,10 @@
-import glob, os
+import glob
+import os
+
 import img2pdf
 import pypandoc
-#~ from wkhtmltopdf import wkhtmltopdf
 
+# ~ from wkhtmltopdf import wkhtmltopdf
 
 
 """Convert image to pdf"""
@@ -30,11 +32,22 @@ os.chdir("/Users/kahnwong/Downloads/SATW/401-500/HTML")
 
 """Convert html to pdf"""
 
-htmls = sorted(glob.glob('*.html'))
+htmls = sorted(glob.glob("*.html"))
 
-#~ # pandoc
-for html in htmls[62:70]: # start 61 - 70
+# ~ # pandoc
+for html in htmls[62:70]:  # start 61 - 70
     hFileName = html[:-5]
-    pypandoc.convert_file(html, 'pdf', outputfile=hFileName + ".pdf",
-        extra_args = ['-V', 'geometry:paperwidth=210mm', '-V', 'geometry:paperheight=297mm', '-V', 'geometry:margin=.5cm'])
-    print('Convert', html, 'complete!')
+    pypandoc.convert_file(
+        html,
+        "pdf",
+        outputfile=hFileName + ".pdf",
+        extra_args=[
+            "-V",
+            "geometry:paperwidth=210mm",
+            "-V",
+            "geometry:paperheight=297mm",
+            "-V",
+            "geometry:margin=.5cm",
+        ],
+    )
+    print("Convert", html, "complete!")

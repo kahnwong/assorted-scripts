@@ -5,7 +5,6 @@ from time import sleep
 import requests
 from tqdm import tqdm
 
-
 WALLABAG_CLIENT_ID = os.getenv("WALLABAG_CLIENT_ID")
 WALLABAG_CLIENT_SECRET = os.getenv("WALLABAG_CLIENT_SECRET")
 WALLABAG_USERNAME = os.getenv("WALLABAG_USERNAME")

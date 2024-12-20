@@ -1,7 +1,9 @@
-import os, glob
-from PIL import Image
-import numpy as np
+import glob
+import os
+
 import img2pdf
+import numpy as np
+from PIL import Image
 
 # https://stackoverflow.com/questions/30227466/combine-several-images-horizontally-with-python
 
@@ -13,7 +15,7 @@ import img2pdf
 
 # main
 
-chapters = sorted(glob.glob('*/')) # debug
+chapters = sorted(glob.glob("*/"))  # debug
 # print(chapters)
 # for chapter in chapters:
 #     os.chdir(chapter)
@@ -41,19 +43,23 @@ chapters = sorted(glob.glob('*/')) # debug
 #
 #     # break
 
+
 def to_pdf(filename, files):
-    with open(filename,"wb") as f:
+    with open(filename, "wb") as f:
         f.write(img2pdf.convert(files))
 
-comic_name = 'My Giant Nerd Boyfriend'
+
+comic_name = "My Giant Nerd Boyfriend"
 # start_chapter = 1
 # start_chapter = str(start_chapter).zfill(5)
 # end_chapter = 123
 # end_chapter = str(end_chapter).zfill(5)
-year = '2017'
-filename_pdf = '{} {}, {}-{}.pdf'.format(comic_name, year, chapters[0].strip('/'), chapters[-1].strip('/'))
+year = "2017"
+filename_pdf = "{} {}, {}-{}.pdf".format(
+    comic_name, year, chapters[0].strip("/"), chapters[-1].strip("/")
+)
 
-merged_images = sorted(glob.glob('*.jpg'))
+merged_images = sorted(glob.glob("*.jpg"))
 print(merged_images)
 to_pdf(filename_pdf, merged_images)
-print('===== {} ====='.format(filename_pdf))
+print("===== {} =====".format(filename_pdf))
