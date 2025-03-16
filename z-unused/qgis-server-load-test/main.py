@@ -36,7 +36,7 @@ def test(bbox):
     session = requests.Session()
     session.auth = ("username", "password")
 
-    # auth = session.post("https://mapserver.karnwong.me")
+    # auth = session.post("https://mapserver.xxxx.xxx")
     r = session.get(wms_url)
 
     with open(f"images/{uuid.uuid4()}.png", "wb") as f:

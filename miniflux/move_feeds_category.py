@@ -20,5 +20,5 @@ target_category_id = 12  # culture, news, politics
 feeds = client.get_category_feeds(category_id=source_category_id)
 for i in feeds:
     client.update_feed(i["id"], category_id=target_category_id)
-    print(f"Updated {i["id"]}")
+    print(f"Updated {i['id']}")
     # break
