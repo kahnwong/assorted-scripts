@@ -11,5 +11,8 @@ do
     git remote add origin git@gitlab.com:"$GITLAB_ORG/$REPO".git
     git push -u origin master
 
-    # gh repo delete "$GITHUB_ORG/$REPO" --yes
+    read -p "Delete repo? (y/N): " response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+      gh repo delete "$GITHUB_ORG/$REPO" --yes
+    fi
 done
