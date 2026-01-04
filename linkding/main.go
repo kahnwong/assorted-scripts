@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/schollz/progressbar/v3"
 )
 
-func addBookmark(url string) {
+func addBookmark(url string, wg *sync.WaitGroup, bar *progressbar.ProgressBar) {
+	defer wg.Done()
+
 	jsonData := []byte(fmt.Sprintf(`{
   "url": "%s",
   "is_archived": false,
@@ -34,10 +37,7 @@ func addBookmark(url string) {
 	}
 	defer resp.Body.Close()
 
-	//body, err := io.ReadAll(resp.Body)
-	//if err != nil {
-	//}
-	//fmt.Println(string(body))
+	bar.Add(1)
 }
 
 func main() {
@@ -45,9 +45,13 @@ func main() {
 		"https://news.ycombinator.com/item?id=42218828",
 	}
 
+	var wg sync.WaitGroup
 	bar := progressbar.Default(int64(len(urls)))
+
 	for _, url := range urls {
-		addBookmark(url)
-		bar.Add(1)
+		wg.Add(1)
+		go addBookmark(url, &wg, bar)
 	}
+
+	wg.Wait()
 }
