@@ -14,6 +14,8 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
+// might need to re-run to make sure no requests are dropped due to sqlite backend
+
 var tag = "h/recipes"
 
 func addBookmark(url string, wg *sync.WaitGroup, bar *progressbar.ProgressBar) {
@@ -73,9 +75,18 @@ func main() {
 	var wg sync.WaitGroup
 	bar := progressbar.Default(int64(len(urls)))
 
+	// Limit concurrent goroutines to 2
+	semaphore := make(chan struct{}, 2)
+
 	for _, url := range urls {
 		wg.Add(1)
-		go addBookmark(url, &wg, bar)
+		semaphore <- struct{}{} // Acquire semaphore
+		go func(u string) {
+			defer func() {
+				<-semaphore // Release semaphore
+			}()
+			addBookmark(u, &wg, bar)
+		}(url)
 	}
 
 	wg.Wait()
