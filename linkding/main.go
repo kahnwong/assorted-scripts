@@ -1,15 +1,20 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/schollz/progressbar/v3"
 )
+
+var tag = "h/recipes"
 
 func addBookmark(url string, wg *sync.WaitGroup, bar *progressbar.ProgressBar) {
 	defer wg.Done()
@@ -20,9 +25,9 @@ func addBookmark(url string, wg *sync.WaitGroup, bar *progressbar.ProgressBar) {
   "unread": false,
   "shared": false,
   "tag_names": [
-    "d/books"
+   "%s"
   ]
-}`, url))
+}`, url, tag))
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/bookmarks/", os.Getenv("LINKDING_ENDPOINT")), bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -41,8 +46,28 @@ func addBookmark(url string, wg *sync.WaitGroup, bar *progressbar.ProgressBar) {
 }
 
 func main() {
-	urls := []string{
-		"https://news.ycombinator.com/item?id=42218828",
+	// Read URLs from file
+	file, err := os.Open("urls.txt")
+	if err != nil {
+		log.Fatalf("Failed to open urls.txt: %v", err)
+	}
+	defer file.Close()
+
+	var urls []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line != "" {
+			urls = append(urls, line)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Error reading file: %v", err)
+	}
+
+	if len(urls) == 0 {
+		log.Fatal("No URLs found in urls.txt")
 	}
 
 	var wg sync.WaitGroup
