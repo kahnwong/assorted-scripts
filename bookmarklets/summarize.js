@@ -22,14 +22,13 @@ javascript:(async function () {
         <div id="content"></div>
         <span id="streaming-cursor"></span>
         <script>
+          var rawText = '';
           window.appendText = function(text) {
+            rawText += text;
             var el = document.getElementById('content');
-            el.textContent += text;
+            el.innerHTML = marked.parse(rawText);
           };
-          window.finalRender = function() {
-            var el = document.getElementById('content');
-            var raw = el.textContent;
-            el.innerHTML = marked.parse(raw);
+          window.streamDone = function() {
             var cursor = document.getElementById('streaming-cursor');
             if (cursor) cursor.remove();
           };
@@ -102,9 +101,9 @@ javascript:(async function () {
             }
         }
 
-        /* 4. Final markdown render */
-        if (outputWin && !outputWin.closed && outputWin.finalRender) {
-            outputWin.finalRender();
+        /* 4. Remove cursor when streaming is complete */
+        if (outputWin && !outputWin.closed && outputWin.streamDone) {
+            outputWin.streamDone();
         }
 
     } catch (err) {
