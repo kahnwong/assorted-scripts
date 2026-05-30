@@ -1,5 +1,10 @@
 javascript:(async function () {
-    /* 1. Create and show Spinner */
+    /* 1. Request notification permission early */
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    /* 2. Create and show Spinner */
     const loader = document.createElement('div');
     loader.id = 'bm-loader';
     loader.innerHTML = `
@@ -21,46 +26,91 @@ javascript:(async function () {
             body: JSON.stringify({
                 model: "Bonsai-1.7B-gguf",
                 input: "Please summarize the text using precise and concise language. Use headers and bulleted lists in the summary, to make it scannable. Maintain the meaning and factual accuracy. " + articleText,
-                stream: false
+                stream: true
             })
         });
 
         if (!response.ok) throw new Error('API request failed');
 
-        const data = await response.json();
-        const resultMarkdown = data.output[0].content[0].text;
-
-        /* 2. Build HTML with Markdown Parser (Marked.js) */
-        const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Summarized Content</title>
-        <meta charset="UTF-8">
-        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
-        <style>
-          body { box-sizing: border-box; min-width: 200px; max-width: 980px; margin: 0 auto; padding: 45px; }
-          @media (max-width: 767px) { body { padding: 15px; } }
-        </style>
-      </head>
-      <body class="markdown-body">
-        <div id="content"></div>
-        <script>
-          /* Inject the markdown into the container */
-          document.getElementById('content').innerHTML = marked.parse(\`${resultMarkdown.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\${/g, '\\${')}\`);
-        </script>
-      </body>
-      </html>
-    `;
+        /* 3. Open output window immediately for streaming */
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Summarized Content</title>
+  <meta charset="UTF-8">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+  <style>
+    body { box-sizing: border-box; min-width: 200px; max-width: 980px; margin: 0 auto; padding: 45px; }
+    @media (max-width: 767px) { body { padding: 15px; } }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    #cursor { display: inline-block; width: 2px; height: 1em; background: #333; margin-left: 2px; vertical-align: text-bottom; animation: blink 1s step-end infinite; }
+  </style>
+</head>
+<body class="markdown-body">
+  <div id="content"></div><span id="cursor"></span>
+  <script>
+    window.rawText = '';
+    window.updateContent = function(text) {
+      window.rawText = text;
+      document.getElementById('content').innerHTML = marked.parse(text);
+    };
+    window.streamDone = function() {
+      var cursor = document.getElementById('cursor');
+      if (cursor) cursor.remove();
+    };
+  <\/script>
+</body>
+</html>`;
 
         const blob = new Blob([html], {type: 'text/html'});
-        window.open(URL.createObjectURL(blob), '_blank');
+        const win = window.open(URL.createObjectURL(blob), '_blank');
+
+        /* 4. Parse SSE stream */
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = '';
+        let buffer = '';
+
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, {stream: true});
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const payload = line.slice(6).trim();
+                if (payload === '[DONE]') break;
+                try {
+                    const event = JSON.parse(payload);
+                    if (event.type === 'response.output_text.delta' && event.delta) {
+                        accumulated += event.delta;
+                        if (win && !win.closed && win.updateContent) {
+                            win.updateContent(accumulated);
+                        }
+                    }
+                } catch (e) { /* skip unparseable lines */ }
+            }
+        }
+
+        /* 5. Finalize rendering */
+        if (win && !win.closed) {
+            if (win.updateContent) win.updateContent(accumulated);
+            if (win.streamDone) win.streamDone();
+        }
+
+        /* 6. Send browser notification */
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification('Summary Ready', { body: 'Your summary has been generated.' });
+        }
 
     } catch (err) {
         alert('Error: ' + err.message);
     } finally {
-        /* 3. Remove Spinner */
+        /* 7. Remove Spinner */
         const el = document.getElementById('bm-loader');
         if (el) el.remove();
     }
