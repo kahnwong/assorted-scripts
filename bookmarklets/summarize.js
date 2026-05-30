@@ -1,8 +1,13 @@
 javascript:(async function () {
+    /* 1. Request notification permission early */
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
     const article = document.querySelector('article') || document.querySelector('[role="main"]') || document.body;
     const articleText = article.innerText || article.textContent;
 
-    /* 1. Open output window immediately with streaming container */
+    /* 2. Open output window immediately with streaming container */
     const html = `
       <!DOCTYPE html>
       <html>
@@ -56,7 +61,7 @@ javascript:(async function () {
     });
 
     try {
-        /* 2. Send streaming request */
+        /* 3. Send streaming request */
         const response = await fetch('http://localhost:13305/v1/responses', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -70,7 +75,7 @@ javascript:(async function () {
 
         if (!response.ok) throw new Error('API request failed');
 
-        /* 3. Read SSE stream and append text deltas */
+        /* 4. Read SSE stream and append text deltas */
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -101,9 +106,14 @@ javascript:(async function () {
             }
         }
 
-        /* 4. Remove cursor when streaming is complete */
+        /* 5. Remove cursor when streaming is complete */
         if (outputWin && !outputWin.closed && outputWin.streamDone) {
             outputWin.streamDone();
+        }
+
+        /* 6. Send browser notification */
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            new Notification('Summary Ready', { body: 'Your summary has been generated.' });
         }
 
     } catch (err) {
