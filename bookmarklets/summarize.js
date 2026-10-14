@@ -1,14 +1,15 @@
-javascript:(async function () {
-    /* 1. Request notification permission early */
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
+javascript: (async function () {
+  /* 1. Request notification permission early */
+  if (typeof Notification !== "undefined" && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
 
-    const article = document.querySelector('article') || document.querySelector('[role="main"]') || document.body;
-    const articleText = article.innerText || article.textContent;
+  const article =
+    document.querySelector("article") || document.querySelector('[role="main"]') || document.body;
+  const articleText = article.innerText || article.textContent;
 
-    /* 2. Open output window immediately with streaming container */
-    const html = `
+  /* 2. Open output window immediately with streaming container */
+  const html = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -42,87 +43,88 @@ javascript:(async function () {
       </html>
     `;
 
-    const blob = new Blob([html], {type: 'text/html'});
-    const outputWin = window.open(URL.createObjectURL(blob), '_blank');
+  const blob = new Blob([html], { type: "text/html" });
+  const outputWin = window.open(URL.createObjectURL(blob), "_blank");
 
-    if (!outputWin) {
-        alert('Popup blocked. Please allow popups for this site.');
-        return;
-    }
+  if (!outputWin) {
+    alert("Popup blocked. Please allow popups for this site.");
+    return;
+  }
 
-    /* Wait for the output window to load */
-    await new Promise(resolve => {
-        const check = setInterval(() => {
-            if (outputWin.document && outputWin.document.readyState === 'complete') {
-                clearInterval(check);
-                resolve();
-            }
-        }, 50);
+  /* Wait for the output window to load */
+  await new Promise((resolve) => {
+    const check = setInterval(() => {
+      if (outputWin.document && outputWin.document.readyState === "complete") {
+        clearInterval(check);
+        resolve();
+      }
+    }, 50);
+  });
+
+  try {
+    /* 3. Send streaming request */
+    const response = await fetch("http://localhost:13305/v1/responses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      targetAddressSpace: "local",
+      body: JSON.stringify({
+        model: "Bonsai-1.7B-gguf",
+        input:
+          "Please summarize the text using precise and concise language. Use headers and bulleted lists in the summary, to make it scannable. Maintain the meaning and factual accuracy. " +
+          articleText,
+        stream: true,
+      }),
     });
 
-    try {
-        /* 3. Send streaming request */
-        const response = await fetch('http://localhost:13305/v1/responses', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            targetAddressSpace: 'local',
-            body: JSON.stringify({
-                model: "Bonsai-1.7B-gguf",
-                input: "Please summarize the text using precise and concise language. Use headers and bulleted lists in the summary, to make it scannable. Maintain the meaning and factual accuracy. " + articleText,
-                stream: true
-            })
-        });
+    if (!response.ok) throw new Error("API request failed");
 
-        if (!response.ok) throw new Error('API request failed');
+    /* 4. Read SSE stream and append text deltas */
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
 
-        /* 4. Read SSE stream and append text deltas */
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-        while (true) {
-            const {done, value} = await reader.read();
-            if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
 
-            buffer += decoder.decode(value, {stream: true});
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") continue;
 
-            for (const line of lines) {
-                if (!line.startsWith('data: ')) continue;
-                const data = line.slice(6).trim();
-                if (data === '[DONE]') continue;
-
-                try {
-                    const event = JSON.parse(data);
-                    if (event.type === 'response.output_text.delta' && event.delta) {
-                        if (outputWin && !outputWin.closed && outputWin.appendText) {
-                            outputWin.appendText(event.delta);
-                        }
-                    }
-                } catch (e) {
-                    /* skip unparseable lines */
-                }
+        try {
+          const event = JSON.parse(data);
+          if (event.type === "response.output_text.delta" && event.delta) {
+            if (outputWin && !outputWin.closed && outputWin.appendText) {
+              outputWin.appendText(event.delta);
             }
+          }
+        } catch (e) {
+          /* skip unparseable lines */
         }
-
-        /* 5. Remove cursor when streaming is complete */
-        if (outputWin && !outputWin.closed && outputWin.streamDone) {
-            outputWin.streamDone();
-        }
-
-        /* 6. Send browser notification */
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-            new Notification('Summary Ready', { body: 'Your summary has been generated.' });
-        }
-
-    } catch (err) {
-        if (outputWin && !outputWin.closed) {
-            outputWin.document.getElementById('content').textContent = 'Error: ' + err.message;
-            var cursor = outputWin.document.getElementById('streaming-cursor');
-            if (cursor) cursor.remove();
-        } else {
-            alert('Error: ' + err.message);
-        }
+      }
     }
+
+    /* 5. Remove cursor when streaming is complete */
+    if (outputWin && !outputWin.closed && outputWin.streamDone) {
+      outputWin.streamDone();
+    }
+
+    /* 6. Send browser notification */
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification("Summary Ready", { body: "Your summary has been generated." });
+    }
+  } catch (err) {
+    if (outputWin && !outputWin.closed) {
+      outputWin.document.getElementById("content").textContent = "Error: " + err.message;
+      var cursor = outputWin.document.getElementById("streaming-cursor");
+      if (cursor) cursor.remove();
+    } else {
+      alert("Error: " + err.message);
+    }
+  }
 })();
